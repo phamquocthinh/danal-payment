@@ -1,33 +1,17 @@
-import { Module } from '@nestjs/common';
+import { Module, Global } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
-// import { PaymentController } from './payment/payment.controller';
 
-import { DanalCreditCardModule } from './payment/danal-credit-card/danal-credit-card.module';
+import { OrderModule } from './order/order.module';
+import { DanalCreditCardModule } from './credit-card/credit-card.module';
 
-import { DanalCreditCardController } from './payment/danal-credit-card/danal-credit-card.controller';
-
+@Global()
 @Module({
   imports: [
-    // ClientsModule.register([
-    //   {
-    //     name: 'PAYMENT_SERVICE',
-    //     transport: Transport.RMQ,
-    //     options: {
-    //       urls: ['amqp://localhost:5672'],
-    //       queue: 'cats_queue',
-    //       queueOptions: {
-    //         durable: false
-    //       },
-    //     },
-    //   },
-    // ]),
     ConfigModule.forRoot({ isGlobal: true, envFilePath: ['.env'] }),
+    OrderModule,
     DanalCreditCardModule
   ],
-  controllers: [
-    // PaymentController,
-    DanalCreditCardController
-  ],
+  controllers: [],
   providers: [],
 })
-export class AppModule {}
+export class AppModule { }

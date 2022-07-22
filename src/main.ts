@@ -1,9 +1,10 @@
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
-import { Transport } from '@nestjs/microservices';
 import { join } from 'path';
+import * as hbs from 'hbs';
 import { AppModule } from './app.module';
+import { HttpExceptionFilter } from './exception/http-exception.filter';
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(
@@ -14,27 +15,14 @@ async function bootstrap() {
   const port = configService.get('PORT');
 
   app.useStaticAssets(join(__dirname, '..', 'public'));
-  app.setBaseViewsDir(join(__dirname, '..', 'views'));
+  app.setBaseViewsDir(join(__dirname, 'views'));
   app.setViewEngine('hbs');
+  hbs.registerPartials(join(__dirname, 'views/partials'));
   
   app.enableCors();
   app.setGlobalPrefix('payment');
 
-  // app.connectMicroservice({
-  //   transport: Transport.RMQ,
-  //   options: {
-  //     urls: [configService.get('RABBIT_HOST')],
-  //     queue: configService.get('RABBIT_PAYMENT_QUEUE'),
-  //     noAck: false,
-  //     queueOptions: {
-  //       durable: true,
-  //     },
-  //   },
-  // });
-
-  await Promise.all([
-    // app.startAllMicroservices(),
-    app.listen(port)
-  ]);
+  app.useGlobalFilters(new HttpExceptionFilter());
+  app.listen(port)
 }
 bootstrap();

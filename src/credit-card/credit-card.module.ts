@@ -1,9 +1,13 @@
 import { Module } from '@nestjs/common';
-import { DanalCreditCardController } from './danal-credit-card.controller';
-import { DanalCreditCardService } from './danal-credit-card.service';
+
+import { OrderModule } from 'src/order/order.module';
+import { DanalCreditCardController } from './credit-card.controller';
+import { DanalCreditCardService } from './credit-card.service';
 
 @Module({
-    imports: [],
+    imports: [
+        OrderModule,
+    ],
     controllers: [
         DanalCreditCardController,
     ],
