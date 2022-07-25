@@ -1,14 +1,17 @@
-import { ExceptionFilter, Catch, ArgumentsHost, HttpException } from '@nestjs/common';
+import { ExceptionFilter, Catch, ArgumentsHost } from '@nestjs/common';
 import { Request, Response } from 'express';
+import { DEFAULT_ERROR_MESSAGE } from 'src/common/common.const';
 
 @Catch()
 export class HttpExceptionFilter implements ExceptionFilter {
-  catch(exception: HttpException, host: ArgumentsHost) {
+  catch(exception: any, host: ArgumentsHost) {
     const ctx = host.switchToHttp();
     const response = ctx.getResponse<Response>();
 
-    console.log(exception)
+    console.log(exception.message.message)
+    console.log(exception.stack)
+    const message = exception?.message || DEFAULT_ERROR_MESSAGE
 
-    response.render('error')
+    response.render('error', { message });
   }
 }

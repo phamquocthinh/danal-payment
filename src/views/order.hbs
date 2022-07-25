@@ -82,7 +82,9 @@
 				<div class="col-12  mb-4 p-0">
 					<input type="hidden" name="userId" value="{{userId}}">
 					<input type="hidden" name="orderId" value="{{id}}">
+					{{#if enablePurchase}}
 					<button class="btn btn-primary btnPay">Purchase<span class="fas fa-arrow-right ps-2"></span>
+					{{/if}}
 				</div>
 			</div>
 		</div>

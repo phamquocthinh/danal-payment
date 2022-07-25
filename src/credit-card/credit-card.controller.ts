@@ -15,8 +15,9 @@ export class DanalCreditCardController {
   }
 
   @Post('cpcgi')
-  async cpcgi(@Body() body: any) {
-    console.log(body)
+  @Render('danal-credit-card/ready')
+  async cpcgi(@Body('RETURNPARAMS') returnParams: string) {
+    return await this.danalCreditCardService.cpcgi(returnParams)
   }
 
 }
