@@ -9,7 +9,7 @@ import {
     encrypt,
     decrypt
 } from 'src/common/common.utils';
-import { DANAL_VALUES, DANAL_URLS } from 'src/common/common.const';
+import { DANAL_VALUES, DANAL_URLS, DOMAIN } from 'src/common/common.const';
 import { PAYMENT_STATUS } from 'src/order/order.const';
 import { OrderService } from 'src/order/order.service';
 
@@ -28,19 +28,19 @@ export class DanalCreditCardService {
         this.IVKEY = Buffer.from(this.configService.get<string>('DANAL_IVKEY'), 'hex');
     }
 
-    private _handleError(orderId: number, error: string | Record<string, any>) {
-        const errorMessage = JSON.stringify(error)
+    private _updateOrder(orderId: number, status: string = PAYMENT_STATUS.PAYMENT_FAIL, data: string | Record<string, any>) {
+        const paymentData = JSON.stringify(data)
         const updateData = {
-            status: PAYMENT_STATUS.PAYMENT_FAIL,
-            paymentData: errorMessage,
+            status,
+            paymentData,
         }
 
         return this.orderService.updateOrder(orderId, updateData);
     }
 
     private _readyData(orderData: Record<string, any>): string {
-        const RETURNURL = 'https://phpstack-805617-2760205.cloudwaysapps.com/CPCGI.php';
-        const CANCELURL = 'https://phpstack-805617-2760205.cloudwaysapps.com/Cancel.php';
+        const returnUrl = `${DOMAIN}/credit-card/cpcgi`;
+        const cancelUrl = `${DOMAIN}/credit-card/cancel?orderId=${orderData.id}`;
 
         const requestData = new Map();
 
@@ -48,17 +48,17 @@ export class DanalCreditCardService {
         requestData.set('AMOUNT', orderData.totalValue);
         requestData.set('CURRENCY', DANAL_VALUES.CURRENCY.WON);
         requestData.set('ITEMNAME', DANAL_VALUES.ITEMNAME);
-        requestData.set('USERAGENT', DANAL_VALUES.USERAGENT.MOBILE);
+        requestData.set('USERAGENT', DANAL_VALUES.USERAGENT.PC);
         requestData.set('ORDERID', orderData.id);
         requestData.set('USERNAME', orderData.user.nickname);
         requestData.set('USERID', orderData.user.id);
         requestData.set('USEREMAIL', orderData.user.email);
-        requestData.set('CANCELURL', CANCELURL);
-        requestData.set('RETURNURL', RETURNURL);
+        requestData.set('CANCELURL', cancelUrl);
+        requestData.set('RETURNURL', returnUrl);
         requestData.set('TXTYPE', DANAL_VALUES.TXTYPE);
         requestData.set('SERVICETYPE', DANAL_VALUES.SERVICETYPE.CREDIT_CARD);
         requestData.set('ISNOTI', DANAL_VALUES.ISNOTI);
-        requestData.set('BYPASSVALUE', '');
+        requestData.set('BYPASSVALUE', `userId=${orderData.user.id}`);
 
         const cpdata = data2string(requestData);
         const cipherText = urlencode.encode(encrypt(cpdata, this.CRYPTOKEY, this.IVKEY));
@@ -77,7 +77,7 @@ export class DanalCreditCardService {
         const decryptedData = decrypt(dataValue[1], this.CRYPTOKEY, this.IVKEY);
         const res = str2data(decryptedData);
 
-        console.log(res)
+        console.log('READY_DATA', res)
 
         return res;
     }
@@ -90,10 +90,7 @@ export class DanalCreditCardService {
             throw new Error(`Order not found`);
         }
 
-        console.log(data)
-        console.log(typeof data.orderId)
-        await this.orderService.updateOrder(orderId, { status: PAYMENT_STATUS.PROCESSING });
-        console.log('zzzz')
+        // await this.orderService.updateOrder(orderId, { status: PAYMENT_STATUS.PROCESSING });
 
         const readyData = this._readyData(orderData);
         const result = await this._doReady(readyData);
@@ -101,15 +98,76 @@ export class DanalCreditCardService {
         return result;
     }
 
-    async cpcgi(returnParams: string) {
+    async cpcgi(data: any) {
+        console.log('POST CPCGI', data)
+        const returnParams = data['RETURNPARAMS'];
         const paramsString: string = decrypt(returnParams, this.CRYPTOKEY, this.IVKEY);
         const params = str2data(paramsString);
 
-        const { RETURNCODE: code, ORDERID: orderId } = params;
+        console.log('RETURNPARAMS', params)
+
+        const { RETURNCODE: code, ORDERID: orderId, RETURNMSG: message, TID: tid } = params;
 
         if (code !== DANAL_VALUES.SUCCESS_CODE) {
-            return this._handleError(orderId, params)
+            await this._updateOrder(orderId, PAYMENT_STATUS.PAYMENT_FAIL, params);
+            throw new Error(message);
         }
+
+        const order = await this.orderService.getOrder({orderId})
+
+        const requestData = new Map();
+        requestData.set('TID', tid);
+        requestData.set('AMOUNT', order.totalValue);
+        requestData.set('TXTYPE', 'BILL');
+        requestData.set('SERVICETYPE', 'DANALCARD');
+
+        const cpdata = data2string(requestData);
+        const cipherText = urlencode.encode(encrypt(cpdata, this.CRYPTOKEY, this.IVKEY));
+        const body = `CPID=${this.CPID}&DATA=${cipherText}`;
+        const resData = await (await fetch(DANAL_URLS.CREDIT_CARD, {
+            method: 'POST',
+            headers: {
+				'content-type': 'application/x-www-form-urlencoded; charset=euc-kr',
+			},
+			body: body,
+        })).text();
+
+        const decodeCipherText = urlencode.decode(resData, 'EUC-KR');
+        const dataValue = decodeCipherText.split('=');
+        const decryptedData = decrypt(dataValue[1], this.CRYPTOKEY, this.IVKEY);
+        const res = str2data(decryptedData);
+
+        console.log('BILL', res)
+
+        if (res?.RETURNCODE !== DANAL_VALUES.SUCCESS_CODE) {
+            await this._updateOrder(orderId, PAYMENT_STATUS.PAYMENT_FAIL, res);
+            throw new Error(`RETURNCODE: ${res.RETURNCODE}; RETURNMSG: ${res.RETURNMSG}`)
+        }
+
+        return res;
+    }
+
+    async success(data: any) {
+        console.log('POST SUCCESS', data)
+        const { ORDERID: orderId } = data;
+
+        await this._updateOrder(orderId, PAYMENT_STATUS.COMPLETED, data);
+
+        return data;
+    }
+
+    async cancel(orderId: string) {
+        console.log('GET CANCEL', orderId)
+        // const returnParams = data['RETURNPARAMS'];
+        // const paramsString: string = decrypt(returnParams, this.CRYPTOKEY, this.IVKEY);
+        // const params = str2data(paramsString);
+
+        // const { ORDERID: orderId } = params;
+
+        await this._updateOrder(+orderId, PAYMENT_STATUS.CANCELLED, '');
+
+        // return params;
+        return;
     }
 }
 

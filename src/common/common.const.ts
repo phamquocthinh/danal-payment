@@ -1,3 +1,5 @@
+export const DOMAIN = 'https://testsme.danalenter.co.kr/payment'
+
 export const DANAL_VALUES = {
     SUCCESS_CODE: '0000',
     CURRENCY: {
@@ -6,7 +8,7 @@ export const DANAL_VALUES = {
     },
     ITEMNAME: 'Product',
     USERAGENT: {
-        PC: 'WC',
+        PC: 'WP',
         MOBILE: 'WM',
         ANDROID: 'WA',
         IOS: 'WI',

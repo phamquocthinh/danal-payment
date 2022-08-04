@@ -8,10 +8,11 @@ export class HttpExceptionFilter implements ExceptionFilter {
     const ctx = host.switchToHttp();
     const response = ctx.getResponse<Response>();
 
-    console.log(exception.message.message)
+    console.log(exception?.message?.message)
+    console.log(exception)
     console.log(exception.stack)
     const message = exception?.message || DEFAULT_ERROR_MESSAGE
 
-    response.render('error', { message });
+    return response.render('error', { message });
   }
 }

@@ -13,4 +13,14 @@ export class OrderController {
   async order(@Query() data: OrderDto) {
     return await this.orderService.getOrder(data);
   }
+
+  @Get('test')
+  async test(@Query() data: OrderDto) {
+    const { orderId } = data;
+    const updateData = {
+      status: 'COMPLETED',
+    }
+
+    return await this.orderService.updateOrder(orderId, updateData);
+  }
 }

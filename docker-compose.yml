@@ -1,12 +1,12 @@
 version: '3.5'
 services:
   payment:
-    container_name: '${CONTAINER_NAME}'
+    container_name: 'payment'
     restart: on-failure
     build: .
     volumes:
-      - .:/usr/src/app
-      - /usr/src/app/node_modules
+      - .:/usr/src/payment
+      - /usr/src/payment/node_modules
     command: >
       sh -c "npm install && npm run start:dev"
     ports:

@@ -2,7 +2,6 @@ import { Injectable, Inject } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
 
 import { lastValueFrom } from 'rxjs';
-import { map, catchError } from 'rxjs/operators';
 
 import { OrderDto, UpdateDataDto } from './order.dto';
 import { OrderInterface } from './order.interface';
@@ -16,34 +15,15 @@ export class OrderService {
     ) {}
 
     async getOrder(data: OrderDto): Promise<OrderInterface> {
-        const order = await lastValueFrom(this.apiService.send({cmd: 'get-order'}, data)
-            .pipe(
-                map(response => {
-                    return response
-                }),
-                catchError(error => {
-                    console.log(error)
-                    throw new Error('Order not found')
-                })
-            ));
+        const order = await lastValueFrom(this.apiService.send({cmd: 'getOrder'}, { orderId: data.orderId }));
         
         order['method'] = PAYMENT_METHOD[order.paymentType];
-        order['enablePurchase'] = order.status === PAYMENT_STATUS.PENDING;
+        order['enablePurchase'] = order.status === PAYMENT_STATUS.PENDING && order['method'];
         
         return order;
     }
 
     async updateOrder(orderId: number, updateData: UpdateDataDto): Promise<void> {
-        await lastValueFrom(this.apiService.send({cmd: 'get-order'}, { orderId, updateData })
-            .pipe(
-                map(response => {
-                    return response
-                }),
-                catchError(error => {
-                    console.log(error)
-                    throw new Error('An error occurred while processing payment, Please try again later')
-                })
-            ));
-        
+        return await lastValueFrom(this.apiService.send({cmd: 'updateOrder'}, { orderId, updateData }))
     } 
 }

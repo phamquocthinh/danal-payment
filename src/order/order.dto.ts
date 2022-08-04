@@ -10,8 +10,8 @@ export class OrderDto {
 
     @Type(() => Number)
     @IsNumber()
-    @IsNotEmpty()
-    userId: number;
+    @IsOptional()
+    userId?: number;
 }
 
 export class UpdateDataDto {
