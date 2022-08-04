@@ -8,14 +8,23 @@ export const DANAL_VALUES = {
     },
     ITEMNAME: 'Product',
     USERAGENT: {
-        PC: 'WP',
-        MOBILE: 'WM',
-        ANDROID: 'WA',
-        IOS: 'WI',
+        CREDIT_CARD: {
+            PC: 'WP',
+            MOBILE: 'WM',
+            ANDROID: 'WA',
+            IOS: 'WI',
+        },
+        BANK_TRANSFER: {
+            PC: 'PC',
+            MOBILE: 'MW',
+            ANDROID: 'MA',
+            IOS: 'MI',
+        }
     },
     TXTYPE: 'AUTH',
     SERVICETYPE: {
         CREDIT_CARD: 'DANALCARD',
+        BANK_TRANSFER: 'WIRETRANSFER',
     },
     ISNOTI: 'N',
     QUOTA: {
@@ -30,6 +39,7 @@ export const DANAL_VALUES = {
 
 export const DANAL_URLS = {
     CREDIT_CARD: 'https://tx-creditcard.danalpay.com/credit/',
+    BANK_TRANSFER: 'https://tx-wiretransfer.danalpay.com/bank/'
 }
 
 export const DEFAULT_ERROR_MESSAGE = `An error occurred while processing payment\nPlease try again later or contact the administrator`

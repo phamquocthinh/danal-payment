@@ -14,7 +14,9 @@ async function bootstrap() {
   const configService = app.get(ConfigService);
   const port = configService.get('PORT');
 
-  app.useStaticAssets(join(__dirname, '..', 'public'));
+  app.useStaticAssets(join(__dirname, '..', 'public'), {
+    prefix: '/payment/',
+  });
   app.setBaseViewsDir(join(__dirname, 'views'));
   app.setViewEngine('hbs');
   hbs.registerPartials(join(__dirname, 'views/partials'));

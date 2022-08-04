@@ -1,0 +1,9 @@
+<form name="form" ACTION="/payment/bank-transfer/success" METHOD="POST">
+    <input TYPE="HIDDEN" NAME="RETURNCODE" VALUE="{{RETURNCODE}}">
+    <input TYPE="HIDDEN" NAME="RETURNMSG" VALUE="{{RETURNMSG}}">
+    <input TYPE="HIDDEN" NAME="TID" VALUE="{{TID}}">
+    <input TYPE="HIDDEN" NAME="ORDERID" VALUE="{{ORDERID}}">
+</form>
+<script>
+    document.form.submit();
+</script>

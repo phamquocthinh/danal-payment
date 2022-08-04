@@ -1,6 +1,6 @@
 import { Controller, Get, Post, Body, Param, Query, Render } from '@nestjs/common';
 import { DanalCreditCardService } from './credit-card.service';
-import { OrderDto } from './credit-card.dto';
+import { OrderDto } from 'src/order/order.dto';
 
 @Controller('credit-card')
 export class DanalCreditCardController {

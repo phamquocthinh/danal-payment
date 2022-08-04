@@ -14,7 +14,7 @@ import { PAYMENT_STATUS } from 'src/order/order.const';
 import { OrderService } from 'src/order/order.service';
 
 @Injectable()
-export class DanalCreditCardService {
+export class DanalBankTransferService {
     private CPID: string;
     private CRYPTOKEY: Buffer;
     private IVKEY: Buffer;
@@ -23,9 +23,9 @@ export class DanalCreditCardService {
         private orderService: OrderService,
         private configService: ConfigService,
     ) {
-        this.CPID = this.configService.get<string>('DANAL_CPID');
-        this.CRYPTOKEY = Buffer.from(this.configService.get<string>('DANAL_CRYPTOKEY'), 'hex');
-        this.IVKEY = Buffer.from(this.configService.get<string>('DANAL_IVKEY'), 'hex');
+        this.CPID = this.configService.get<string>('DANAL_BANK_CPID');
+        this.CRYPTOKEY = Buffer.from(this.configService.get<string>('DANAL_BANK_CRYPTOKEY'), 'hex');
+        this.IVKEY = Buffer.from(this.configService.get<string>('DANAL_BANK_IVKEY'), 'hex');
     }
 
     private _updateOrder(orderId: number, status: string = PAYMENT_STATUS.PAYMENT_FAIL, data: string | Record<string, any>) {
@@ -39,16 +39,14 @@ export class DanalCreditCardService {
     }
 
     private _readyData(orderData: Record<string, any>): string {
-        const returnUrl = `${DOMAIN}/credit-card/cpcgi`;
-        const cancelUrl = `${DOMAIN}/credit-card/cancel?orderId=${orderData.id}`;
+        const returnUrl = `${DOMAIN}/bank-transfer/cpcgi`;
+        const cancelUrl = `${DOMAIN}/bank-transfer/cancel?orderId=${orderData.id}`;
 
         const requestData = new Map();
 
-        requestData.set('SUBCPID', '');
         requestData.set('AMOUNT', orderData.totalValue);
-        requestData.set('CURRENCY', DANAL_VALUES.CURRENCY.WON);
         requestData.set('ITEMNAME', DANAL_VALUES.ITEMNAME);
-        requestData.set('USERAGENT', DANAL_VALUES.USERAGENT.CREDIT_CARD.MOBILE);
+        requestData.set('USERAGENT', DANAL_VALUES.USERAGENT.BANK_TRANSFER.MOBILE);
         requestData.set('ORDERID', orderData.id);
         requestData.set('USERNAME', orderData.user.nickname);
         requestData.set('USERID', orderData.user.id);
@@ -56,9 +54,11 @@ export class DanalCreditCardService {
         requestData.set('CANCELURL', cancelUrl);
         requestData.set('RETURNURL', returnUrl);
         requestData.set('TXTYPE', DANAL_VALUES.TXTYPE);
-        requestData.set('SERVICETYPE', DANAL_VALUES.SERVICETYPE.CREDIT_CARD);
+        requestData.set('SERVICETYPE', DANAL_VALUES.SERVICETYPE.BANK_TRANSFER);
         requestData.set('ISNOTI', DANAL_VALUES.ISNOTI);
         requestData.set('BYPASSVALUE', `userId=${orderData.user.id}`);
+
+        console.log(requestData);
 
         const cpdata = data2string(requestData);
         const cipherText = urlencode.encode(encrypt(cpdata, this.CRYPTOKEY, this.IVKEY));
@@ -67,7 +67,7 @@ export class DanalCreditCardService {
     }
 
     private async _doReady(readyData: string) {
-        const url = `${DANAL_URLS.CREDIT_CARD}?CPID=${this.CPID}&DATA=${readyData}`;
+        const url = `${DANAL_URLS.BANK_TRANSFER}?CPID=${this.CPID}&DATA=${readyData}`;
         const resData = await (await fetch(url, {
             method: 'POST'
         })).text();
@@ -86,6 +86,8 @@ export class DanalCreditCardService {
         const { orderId } = data;
         const orderData = await this.orderService.getOrder(data)
 
+        console.log(orderData)
+
         if (!orderData || orderData.status !== PAYMENT_STATUS.PENDING) {
             throw new Error(`Order not found`);
         }
@@ -93,7 +95,11 @@ export class DanalCreditCardService {
         // await this.orderService.updateOrder(orderId, { status: PAYMENT_STATUS.PROCESSING });
 
         const readyData = this._readyData(orderData);
-        const result = await this._doReady(readyData);
+        const result = await this._doReady(readyData)
+
+        if (result?.RETURNCODE !== DANAL_VALUES.SUCCESS_CODE) {
+            throw new Error(`Request payment error: ${result?.RETURNMSG || ''}`);
+        }
 
         return result;
     }
@@ -120,15 +126,16 @@ export class DanalCreditCardService {
         }
 
         const requestData = new Map();
+        requestData.set('CPID', this.CPID);
         requestData.set('TID', tid);
         requestData.set('AMOUNT', order.totalValue);
         requestData.set('TXTYPE', 'BILL');
-        requestData.set('SERVICETYPE', DANAL_VALUES.SERVICETYPE.CREDIT_CARD);
+        requestData.set('SERVICETYPE', 'DANALCARD');
 
         const cpdata = data2string(requestData);
         const cipherText = urlencode.encode(encrypt(cpdata, this.CRYPTOKEY, this.IVKEY));
         const body = `CPID=${this.CPID}&DATA=${cipherText}`;
-        const resData = await (await fetch(DANAL_URLS.CREDIT_CARD, {
+        const resData = await (await fetch(DANAL_URLS.BANK_TRANSFER, {
             method: 'POST',
             headers: {
 				'content-type': 'application/x-www-form-urlencoded; charset=euc-kr',

@@ -2,6 +2,7 @@
 
 body{
     background:#eee;
+    font-size: 2.5rem;
 }
 .card {
     box-shadow: 0 20px 27px 0 rgb(0 0 0 / 5%);
@@ -22,8 +23,8 @@ body{
     color: inherit!important;
 }
 .btn.btn-primary {
+    font-size: inherit;
     width: 100%;
-    height: 55px;
     border-radius: 1rem;
     padding: 13px 0;
     background-color: black;

@@ -1,0 +1,20 @@
+{{> header}}
+<div class="container-fluid">
+
+    <div class="container">
+        <div class="row">
+            <div class="col-lg-12">
+                <div class="card mb-4 mt-4">
+                    <div class="card-body text-center">
+                        Payment success!
+                    </div>
+										<input TYPE="HIDDEN" NAME="RETURNCODE" VALUE="{{RETURNCODE}}">
+										<input TYPE="HIDDEN" NAME="RETURNMSG" VALUE="{{RETURNMSG}}">
+										<input TYPE="HIDDEN" NAME="TID" VALUE="{{TID}}">
+										<input TYPE="HIDDEN" NAME="ORDERID" VALUE="{{ORDERID}}">
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{{> footer}}
