@@ -1,5 +1,10 @@
 import * as urlencode from 'urlencode';
+import * as util from 'util';
+import * as child from 'child_process';
 import { createCipheriv, createDecipheriv } from 'crypto';
+import fetch, { Request, Response, FetchError } from 'node-fetch';
+
+const exec = util.promisify(child.exec);
 
 export const str2data = (qs: string): Record<string, any> => {
     const chunks = qs.split('&');
@@ -41,4 +46,69 @@ export const decrypt = (messagebase64: any, key: Buffer, iv: Buffer): string => 
     dec += decipher.final();
 
     return dec;
+}
+
+export const callDanalService = async(url: string, data?: string): Promise<string | false> => {
+    const options: Request = {
+        method: 'POST',
+        headers: {
+            'content-type': 'application/x-www-form-urlencoded; charset=euc-kr',
+        },
+    }
+
+    if (data) {
+        options.body = data;
+    }
+
+    return fetch(url, options)
+        .then((response: Response) => {
+            return response.text();
+        })
+        .catch((error: FetchError) => {
+            console.log(error)
+            return false;
+        });
+}
+
+export const callTeleditService = async(command: string): Promise<string | false> => {
+    const { stdout, stderr } = await exec(command);
+
+    if (stderr) {
+        console.log(stderr);
+        return false;
+    }
+
+    return stdout;
+}
+
+export const makeItemInfo = (amount: number, orderId: number | string, itemName: string): string => {
+    const stringOrderId = orderId.toString();
+
+    return `${stringOrderId.substring(0, 1)}|${amount}|1|${stringOrderId}|${itemName}`;
+}
+
+export const makeTeleditParams = (data: any): string => {
+    const arrayData = [];
+
+    data.forEach((value, key) => {
+        arrayData.push(`${key}=${value}`);
+    })
+
+    return arrayData.join(';');
+}
+
+export const parseTeleditResponse = (data: string): Record<string, string> => {
+    const result: Record<string, string> = {};
+
+    data.split("\n").forEach(str => {
+        console.log('string', str)
+        const [key, value] = str.split("=");
+        console.log(key, value)
+        
+        if (key && value) {
+            result[key] = value.trim();
+        }
+    })
+
+    return result;
 }

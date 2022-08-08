@@ -25,6 +25,7 @@ export interface OrderInterface {
     deletedAt: Date | null;
     status: string;
     totalValue: number;
+    payPoint: number;
     userId: number;
     isPaid: boolean;
     isGift: boolean;

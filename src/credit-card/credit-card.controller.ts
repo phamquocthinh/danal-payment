@@ -22,7 +22,7 @@ export class DanalCreditCardController {
 
   @Get('cancel')
   @Render('danal-credit-card/cancel')
-  async cancel(@Param('orderId') orderId: string) {
+  async cancel(@Query('orderId') orderId: string) {
     return await this.danalCreditCardService.cancel(orderId);
   }
 

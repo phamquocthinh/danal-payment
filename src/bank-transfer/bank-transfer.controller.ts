@@ -22,7 +22,7 @@ export class DanalBankTransferController {
 
   @Get('cancel')
   @Render('danal-bank-transfer/cancel')
-  async cancel(@Param('orderId') orderId: string) {
+  async cancel(@Query('orderId') orderId: string) {
     return await this.danalBankTransferService.cancel(orderId);
   }
 

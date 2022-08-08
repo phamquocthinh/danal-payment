@@ -1,5 +1,6 @@
 import * as urlencode from 'urlencode';
 import { createCipheriv, createDecipheriv } from 'crypto';
+import fetch, { Request, Response, FetchError } from 'node-fetch'
 
 export const str2data = (qs: string): Record<string, any> => {
     const chunks = qs.split('&');
@@ -41,4 +42,26 @@ export const decrypt = (messagebase64: any, key: Buffer, iv: Buffer) => {
     dec += decipher.final();
 
     return dec;
+}
+
+export const callDanalService = (url: string, data?: string): string | false => {
+    const options: Request = {
+        method: 'POST',
+        headers: {
+            'content-type': 'application/x-www-form-urlencoded; charset=euc-kr',
+        },
+    }
+
+    if (data) {
+        options.body = data;
+    }
+
+    return fetch(url, options)
+        .then((response: Response) => {
+            return response.text();
+        })
+        .catch((error: FetchError) => {
+            console.log(error)
+            return false;
+        });
 }

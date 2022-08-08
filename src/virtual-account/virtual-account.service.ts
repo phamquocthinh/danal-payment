@@ -15,7 +15,7 @@ import { PAYMENT_STATUS } from 'src/order/order.const';
 import { OrderService } from 'src/order/order.service';
 
 @Injectable()
-export class DanalCreditCardService {
+export class DanalVirtualAccountService {
     private CPID: string;
     private CRYPTOKEY: Buffer;
     private IVKEY: Buffer;
@@ -24,9 +24,9 @@ export class DanalCreditCardService {
         private orderService: OrderService,
         private configService: ConfigService,
     ) {
-        this.CPID = this.configService.get<string>('DANAL_CPID');
-        this.CRYPTOKEY = Buffer.from(this.configService.get<string>('DANAL_CRYPTOKEY'), 'hex');
-        this.IVKEY = Buffer.from(this.configService.get<string>('DANAL_IVKEY'), 'hex');
+        this.CPID = this.configService.get<string>('DANAL_VA_CPID');
+        this.CRYPTOKEY = Buffer.from(this.configService.get<string>('DANAL_VA_CRYPTOKEY'), 'hex');
+        this.IVKEY = Buffer.from(this.configService.get<string>('DANAL_VA_IVKEY'), 'hex');
     }
 
     private _updateOrder(orderId: number, status: string = PAYMENT_STATUS.PAYMENT_FAIL, data: string | Record<string, any>) {
@@ -40,8 +40,8 @@ export class DanalCreditCardService {
     }
 
     private _readyData(orderData: Record<string, any>): string {
-        const returnUrl = `${DOMAIN}/credit-card/cpcgi`;
-        const cancelUrl = `${DOMAIN}/credit-card/cancel?orderId=${orderData.id}`;
+        const returnUrl = `${DOMAIN}/virtual-account/cpcgi`;
+        const cancelUrl = `${DOMAIN}/virtual-account/cancel?orderId=${orderData.id}`;
 
         const requestData = new Map();
 
@@ -52,18 +52,18 @@ export class DanalCreditCardService {
         }
 
         requestData.set('SUBCPID', '');
-        requestData.set('AMOUNT', amount);
+        requestData.set('AMOUNT', orderData.totalValue);
         requestData.set('CURRENCY', DANAL_VALUES.CURRENCY.WON);
         requestData.set('ITEMNAME', DANAL_VALUES.ITEMNAME);
-        requestData.set('USERAGENT', DANAL_VALUES.USERAGENT.CREDIT_CARD.MOBILE);
+        requestData.set('USERAGENT', DANAL_VALUES.USERAGENT.VACCOUNT.MOBILE);
         requestData.set('ORDERID', orderData.id);
         requestData.set('USERNAME', orderData.user.nickname);
         requestData.set('USERID', orderData.user.id);
         requestData.set('USEREMAIL', orderData.user.email);
         requestData.set('CANCELURL', cancelUrl);
         requestData.set('RETURNURL', returnUrl);
-        requestData.set('TXTYPE', DANAL_VALUES.TXTYPE.CREDIT_CARD.READY);
-        requestData.set('SERVICETYPE', DANAL_VALUES.SERVICETYPE.CREDIT_CARD);
+        requestData.set('TXTYPE', DANAL_VALUES.TXTYPE.VACCOUNT.READY);
+        requestData.set('SERVICETYPE', DANAL_VALUES.SERVICETYPE.VACCOUNT);
         requestData.set('ISNOTI', DANAL_VALUES.ISNOTI);
         requestData.set('BYPASSVALUE', `userId=${orderData.user.id}`);
 
@@ -74,8 +74,7 @@ export class DanalCreditCardService {
     }
 
     private async _doReady(readyData: string) {
-        const url = `${DANAL_URLS.CREDIT_CARD}?CPID=${this.CPID}&DATA=${readyData}`;
-        
+        const url = `${DANAL_URLS.VACCOUNT}?CPID=${this.CPID}&DATA=${readyData}`;
         const resData = await callDanalService(url);
 
         if (!resData) {
@@ -105,11 +104,17 @@ export class DanalCreditCardService {
         const readyData = this._readyData(orderData);
         const result = await this._doReady(readyData);
 
+        const { RETURNCODE: code, RETURNMSG: message } = result;
+
+        if (code !== DANAL_VALUES.SUCCESS_CODE) {
+            throw new Error(PAYMENT_ERROR.REQUEST_PAYMENT_WITH_CODE(code, message));
+        }
+
         return result;
     }
 
     async cpcgi(data: any) {
-        console.log('POST CPCGI', data)
+        console.log('POST ISSUE VACCOUNT', data)
         const returnParams = data['RETURNPARAMS'];
         const paramsString: string = decrypt(returnParams, this.CRYPTOKEY, this.IVKEY);
         const params = str2data(paramsString);
@@ -134,13 +139,13 @@ export class DanalCreditCardService {
 
         requestData.set('TID', tid);
         requestData.set('AMOUNT', amount);
-        requestData.set('TXTYPE', DANAL_VALUES.TXTYPE.CREDIT_CARD.CPCGI);
-        requestData.set('SERVICETYPE', DANAL_VALUES.SERVICETYPE.CREDIT_CARD);
+        requestData.set('TXTYPE', DANAL_VALUES.TXTYPE.VACCOUNT.CPCGI);
+        requestData.set('SERVICETYPE', DANAL_VALUES.SERVICETYPE.VACCOUNT);
 
         const cpdata = data2string(requestData);
         const cipherText = urlencode.encode(encrypt(cpdata, this.CRYPTOKEY, this.IVKEY));
         const body = `CPID=${this.CPID}&DATA=${cipherText}`;
-        const resData = await callDanalService(DANAL_URLS.CREDIT_CARD, body);
+        const resData = await callDanalService(DANAL_URLS.VACCOUNT, body);
 
         if (!resData) {
             throw new Error(PAYMENT_ERROR.PROCESSING_PAYMENT);
@@ -155,7 +160,7 @@ export class DanalCreditCardService {
 
         const { RETURNCODE: returnCode, RETURNMSG: returnMessage } = res;
 
-        if (returnCode !== DANAL_VALUES.SUCCESS_CODE) {
+        if (res?.RETURNCODE !== DANAL_VALUES.SUCCESS_CODE) {
             await this._updateOrder(orderId, PAYMENT_STATUS.PAYMENT_FAIL, res);
             throw new Error(PAYMENT_ERROR.REQUEST_PAYMENT_WITH_CODE(returnCode, returnMessage));
         }
@@ -179,5 +184,3 @@ export class DanalCreditCardService {
         return;
     }
 }
-
-

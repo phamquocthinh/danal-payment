@@ -4,6 +4,8 @@ import { ConfigModule } from '@nestjs/config';
 import { OrderModule } from './order/order.module';
 import { DanalCreditCardModule } from './credit-card/credit-card.module';
 import { DanalBankTransferModule } from './bank-transfer/bank-transfer.module';
+import { DanalVirtualAccountModule } from './virtual-account/virtual-account.module';
+import { DanalMobilePaymentModule } from './mobile-payment/mobile-payment.module';
 
 @Global()
 @Module({
@@ -12,6 +14,8 @@ import { DanalBankTransferModule } from './bank-transfer/bank-transfer.module';
     OrderModule,
     DanalCreditCardModule,
     DanalBankTransferModule,
+    DanalVirtualAccountModule,
+    DanalMobilePaymentModule
   ],
   controllers: [],
   providers: [],

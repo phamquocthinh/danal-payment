@@ -19,12 +19,32 @@ export const DANAL_VALUES = {
             MOBILE: 'MW',
             ANDROID: 'MA',
             IOS: 'MI',
-        }
+        },
+        VACCOUNT: {
+            PC: 'PC',
+            MOBILE: 'MW',
+            ANDROID: 'MA',
+            IOS: 'MI',
+        },
     },
-    TXTYPE: 'AUTH',
+    TXTYPE: {
+        CREDIT_CARD: {
+            READY: 'AUTH',
+            CPCGI: 'BILL',
+        },
+        BANK_TRANSFER: {
+            READY: 'AUTH',
+            CPCGI: 'BILL',
+        },
+        VACCOUNT: {
+            READY: 'AUTH',
+            CPCGI: 'ISSUEVACCOUNT',
+        },
+    },
     SERVICETYPE: {
         CREDIT_CARD: 'DANALCARD',
         BANK_TRANSFER: 'WIRETRANSFER',
+        VACCOUNT: 'DANALVACCOUNT',
     },
     ISNOTI: 'N',
     QUOTA: {
@@ -37,9 +57,10 @@ export const DANAL_VALUES = {
     }
 }
 
+export const MIN_ORDER_AMOUNT: number = 100; // min amount 100W
+
 export const DANAL_URLS = {
     CREDIT_CARD: 'https://tx-creditcard.danalpay.com/credit/',
-    BANK_TRANSFER: 'https://tx-wiretransfer.danalpay.com/bank/'
+    BANK_TRANSFER: 'https://tx-wiretransfer.danalpay.com/bank/',
+    VACCOUNT: 'https://tx-vaccount.danalpay.com/vaccount/',
 }
-
-export const DEFAULT_ERROR_MESSAGE = `An error occurred while processing payment\nPlease try again later or contact the administrator`

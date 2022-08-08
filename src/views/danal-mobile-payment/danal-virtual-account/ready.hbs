@@ -1,0 +1,18 @@
+{{> header}}
+<form name="form" ACTION="https://ui.teledit.com/Danal/Teledit/Mobile/Start.php" METHOD="POST">
+	<input TYPE="HIDDEN" NAME="ServerInfo" VALUE="{{ServerInfo}}">
+	<input TYPE="HIDDEN" NAME="CPName" VALUE="{{CPName}}">
+	<input TYPE="HIDDEN" NAME="ItemName" VALUE="{{ItemName}}">
+	<input TYPE="HIDDEN" NAME="ItemAmt" VALUE="{{ItemAmt}}">
+	<input TYPE="HIDDEN" NAME="TargetURL" VALUE="{{TargetURL}}">
+	<input TYPE="HIDDEN" NAME="BackURL" VALUE="{{BackURL}}">
+	<input TYPE="HIDDEN" NAME="IsPreOtbill" VALUE="{{IsPreOtbill}}">
+	<input TYPE="HIDDEN" NAME="IsSubscript" VALUE="{{IsSubscript}}">
+	<input TYPE="HIDDEN" NAME="IsCharSet" VALUE="{{IsCharSet}}">
+	<input TYPE="HIDDEN" NAME="Email" VALUE="{{Email}}">
+</form>
+<script>
+	document.form.submit();
+</script>
+</form>
+{{> footer}}

@@ -1,15 +1,16 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as urlencode from 'urlencode';
-import * as fetch from 'node-fetch';
 
 import {
     str2data,
     data2string,
     encrypt,
-    decrypt
+    decrypt,
+    callDanalService,
 } from 'src/common/common.utils';
-import { DANAL_VALUES, DANAL_URLS, DOMAIN } from 'src/common/common.const';
+import { DANAL_VALUES, DANAL_URLS, DOMAIN, MIN_ORDER_AMOUNT } from 'src/common/common.const';
+import { PAYMENT_ERROR } from 'src/common/common.error';
 import { PAYMENT_STATUS } from 'src/order/order.const';
 import { OrderService } from 'src/order/order.service';
 
@@ -44,7 +45,13 @@ export class DanalBankTransferService {
 
         const requestData = new Map();
 
-        requestData.set('AMOUNT', orderData.totalValue);
+        const amount = orderData.payPoint ? orderData.totalValue - orderData.payPoint : orderData.totalValue;
+
+        if (amount < MIN_ORDER_AMOUNT) {
+            throw new Error(PAYMENT_ERROR.INVALID_AMOUNT(MIN_ORDER_AMOUNT));
+        }
+
+        requestData.set('AMOUNT', amount);
         requestData.set('ITEMNAME', DANAL_VALUES.ITEMNAME);
         requestData.set('USERAGENT', DANAL_VALUES.USERAGENT.BANK_TRANSFER.MOBILE);
         requestData.set('ORDERID', orderData.id);
@@ -53,12 +60,10 @@ export class DanalBankTransferService {
         requestData.set('USEREMAIL', orderData.user.email);
         requestData.set('CANCELURL', cancelUrl);
         requestData.set('RETURNURL', returnUrl);
-        requestData.set('TXTYPE', DANAL_VALUES.TXTYPE);
+        requestData.set('TXTYPE', DANAL_VALUES.TXTYPE.BANK_TRANSFER.READY);
         requestData.set('SERVICETYPE', DANAL_VALUES.SERVICETYPE.BANK_TRANSFER);
         requestData.set('ISNOTI', DANAL_VALUES.ISNOTI);
         requestData.set('BYPASSVALUE', `userId=${orderData.user.id}`);
-
-        console.log(requestData);
 
         const cpdata = data2string(requestData);
         const cipherText = urlencode.encode(encrypt(cpdata, this.CRYPTOKEY, this.IVKEY));
@@ -68,9 +73,11 @@ export class DanalBankTransferService {
 
     private async _doReady(readyData: string) {
         const url = `${DANAL_URLS.BANK_TRANSFER}?CPID=${this.CPID}&DATA=${readyData}`;
-        const resData = await (await fetch(url, {
-            method: 'POST'
-        })).text();
+        const resData = await callDanalService(url);
+
+        if (!resData) {
+            throw new Error(PAYMENT_ERROR.REQUEST_PAYMENT);
+        }
 
         const decodeCipherText = urlencode.decode(resData, 'EUC-KR');
         const dataValue = decodeCipherText.split('=');
@@ -86,10 +93,8 @@ export class DanalBankTransferService {
         const { orderId } = data;
         const orderData = await this.orderService.getOrder(data)
 
-        console.log(orderData)
-
         if (!orderData || orderData.status !== PAYMENT_STATUS.PENDING) {
-            throw new Error(`Order not found`);
+            throw new Error(PAYMENT_ERROR.ORDER_NOT_FOUND);
         }
 
         // await this.orderService.updateOrder(orderId, { status: PAYMENT_STATUS.PROCESSING });
@@ -97,8 +102,10 @@ export class DanalBankTransferService {
         const readyData = this._readyData(orderData);
         const result = await this._doReady(readyData)
 
-        if (result?.RETURNCODE !== DANAL_VALUES.SUCCESS_CODE) {
-            throw new Error(`Request payment error: ${result?.RETURNMSG || ''}`);
+        const { RETURNCODE: code, RETURNMSG: message } = result;
+
+        if (code !== DANAL_VALUES.SUCCESS_CODE) {
+            throw new Error(PAYMENT_ERROR.REQUEST_PAYMENT_WITH_CODE(code, message));
         }
 
         return result;
@@ -116,32 +123,34 @@ export class DanalBankTransferService {
 
         if (code !== DANAL_VALUES.SUCCESS_CODE) {
             await this._updateOrder(orderId, PAYMENT_STATUS.PAYMENT_FAIL, params);
-            throw new Error(message);
+            throw new Error(PAYMENT_ERROR.RESPONSE_PAYMENT_WITH_CODE(code, message));
         }
 
         const order = await this.orderService.getOrder({orderId})
 
         if (order?.status !== PAYMENT_STATUS.PENDING) {
-            throw new Error('Payment already processed')
+            throw new Error(PAYMENT_ERROR.PAYMENT_ALREADY_PROCESSED);
         }
 
         const requestData = new Map();
+
+        const amount = order.payPoint ? order.totalValue - order.payPoint : order.totalValue;
+
         requestData.set('CPID', this.CPID);
         requestData.set('TID', tid);
-        requestData.set('AMOUNT', order.totalValue);
-        requestData.set('TXTYPE', 'BILL');
-        requestData.set('SERVICETYPE', 'DANALCARD');
+        requestData.set('AMOUNT', amount);
+        requestData.set('TXTYPE', DANAL_VALUES.TXTYPE.BANK_TRANSFER.CPCGI);
+        requestData.set('SERVICETYPE', DANAL_VALUES.SERVICETYPE.BANK_TRANSFER);
 
         const cpdata = data2string(requestData);
         const cipherText = urlencode.encode(encrypt(cpdata, this.CRYPTOKEY, this.IVKEY));
         const body = `CPID=${this.CPID}&DATA=${cipherText}`;
-        const resData = await (await fetch(DANAL_URLS.BANK_TRANSFER, {
-            method: 'POST',
-            headers: {
-				'content-type': 'application/x-www-form-urlencoded; charset=euc-kr',
-			},
-			body: body,
-        })).text();
+
+        const resData = await callDanalService(DANAL_URLS.CREDIT_CARD, body);
+
+        if (!resData) {
+            throw new Error(PAYMENT_ERROR.PROCESSING_PAYMENT);
+        }
 
         const decodeCipherText = urlencode.decode(resData, 'EUC-KR');
         const dataValue = decodeCipherText.split('=');
@@ -150,9 +159,11 @@ export class DanalBankTransferService {
 
         console.log('BILL', res)
 
-        if (res?.RETURNCODE !== DANAL_VALUES.SUCCESS_CODE) {
+        const { RETURNCODE: returnCode, RETURNMSG: returnMessage } = res;
+
+        if (returnCode !== DANAL_VALUES.SUCCESS_CODE) {
             await this._updateOrder(orderId, PAYMENT_STATUS.PAYMENT_FAIL, res);
-            throw new Error(`RETURNCODE: ${res.RETURNCODE}; RETURNMSG: ${res.RETURNMSG}`)
+            throw new Error(PAYMENT_ERROR.REQUEST_PAYMENT_WITH_CODE(returnCode, returnMessage));
         }
 
         return res;
@@ -168,16 +179,9 @@ export class DanalBankTransferService {
     }
 
     async cancel(orderId: string) {
-        console.log('GET CANCEL', orderId)
-        // const returnParams = data['RETURNPARAMS'];
-        // const paramsString: string = decrypt(returnParams, this.CRYPTOKEY, this.IVKEY);
-        // const params = str2data(paramsString);
-
-        // const { ORDERID: orderId } = params;
-
+        console.log('GET CANCEL', orderId);
         await this._updateOrder(+orderId, PAYMENT_STATUS.CANCELLED, '');
 
-        // return params;
         return;
     }
 }
