@@ -127,7 +127,7 @@ export class DanalMobilePaymentService {
     async cpcgi(data: any) {
         console.log('POST CPCGI', data);
         const bypassValue = data['ByPassValue'];
-        const orderId = bypassValue.spilt("=")[1];
+        const orderId = bypassValue.split("=")[1];
 
         if (!orderId) {
             throw new Error(`Error while get bypassvalue from Teledit ${bypassValue}`);
@@ -157,32 +157,49 @@ export class DanalMobilePaymentService {
         if (!resData) {
             throw new Error(PAYMENT_ERROR.PROCESSING_PAYMENT);
         }
+
+        console.log('RAW NCONFIRM', resData);
         
         const res = parseTeleditResponse(resData);
+        console.log('NCONFIRM', res);
 
         if (res?.Result !== '0') {
             throw new Error(res?.ErrMsg);
         }
 
-        
+        const requestBillData = new Map();
+        requestBillData.set('Command', 'NBILL');
+        requestBillData.set('OUTPUTOPTION', 'DEFAULT');
+        requestBillData.set('BillOption', 0);
+        requestBillData.set('ServerInfo',data['ServerInfo']);
+        requestBillData.set('IFVERSION', 'V1.1.2')
 
-        console.log('BILL', res)
+        const billCommand = `${this.TELEDIT_PATH}/SClient "${makeTeleditParams(requestBillData)}"`;
+        const resBillData = await callTeleditService(billCommand);
 
-        const { RETURNCODE: returnCode, RETURNMSG: returnMessage } = res;
+        console.log('RAW BILL', resBillData);
 
-        if (returnCode !== DANAL_VALUES.SUCCESS_CODE) {
-            await this._updateOrder(orderId, PAYMENT_STATUS.PAYMENT_FAIL, res);
-            throw new Error(PAYMENT_ERROR.REQUEST_PAYMENT_WITH_CODE(returnCode, returnMessage));
+        if (!resBillData) {
+            throw new Error(PAYMENT_ERROR.PROCESSING_PAYMENT);
         }
 
-        return res;
+        const resBill = parseTeleditResponse(resBillData);
+
+        console.log('BILL', resBill)
+
+        if (resBill?.Result !== '0') {
+            await this._updateOrder(orderId, PAYMENT_STATUS.PAYMENT_FAIL, resBill);
+            throw new Error(PAYMENT_ERROR.REQUEST_PAYMENT_WITH_CODE(resBill?.Result, resBill?.ErrMsg));
+        }
+
+        return resBill;
     }
 
     async success(data: any) {
         console.log('POST SUCCESS', data)
         const { ORDERID: orderId } = data;
 
-        await this._updateOrder(orderId, PAYMENT_STATUS.COMPLETED, data);
+        await this._updateOrder(+orderId, PAYMENT_STATUS.COMPLETED, data);
 
         return data;
     }

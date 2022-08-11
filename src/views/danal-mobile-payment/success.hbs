@@ -1,0 +1,23 @@
+{{> header}}
+<div class="container-fluid">
+
+    <div class="container">
+        <div class="row">
+            <div class="col-lg-12">
+                <div class="card mb-4 mt-4">
+                    <div class="card-body text-center">
+                        Payment success!
+                    </div>
+                    <input TYPE="HIDDEN" NAME="Result" VALUE="{{Result}}">
+                    <input TYPE="HIDDEN" NAME="ErrMsg" VALUE="{{ErrMsg}}">
+                    <input TYPE="HIDDEN" NAME="DATE" VALUE="{{DATE}}">
+                    <input TYPE="HIDDEN" NAME="TID" VALUE="{{TID}}">
+                    <input TYPE="HIDDEN" NAME="DNTID" VALUE="{{DNTID}}">
+                    <input TYPE="HIDDEN" NAME="RemainAmt" VALUE="{{RemainAmt}}">
+                    <input TYPE="HIDDEN" NAME="ORDERID" VALUE="{{ORDERID}}">
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{{> footer}}

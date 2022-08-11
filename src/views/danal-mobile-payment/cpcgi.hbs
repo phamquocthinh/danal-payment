@@ -1,0 +1,12 @@
+<form name="form" ACTION="/payment/mobile-payment/success" METHOD="POST">
+    <input TYPE="HIDDEN" NAME="Result" VALUE="{{Result}}">
+    <input TYPE="HIDDEN" NAME="ErrMsg" VALUE="{{ErrMsg}}">
+    <input TYPE="HIDDEN" NAME="DATE" VALUE="{{DATE}}">
+    <input TYPE="HIDDEN" NAME="TID" VALUE="{{TID}}">
+    <input TYPE="HIDDEN" NAME="DNTID" VALUE="{{DNTID}}">
+    <input TYPE="HIDDEN" NAME="RemainAmt" VALUE="{{RemainAmt}}">
+    <input TYPE="HIDDEN" NAME="ORDERID" VALUE="{{ORDERID}}">
+</form>
+<script>
+    document.form.submit();
+</script>

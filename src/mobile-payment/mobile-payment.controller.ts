@@ -26,6 +26,12 @@ export class DanalMobilePaymentController {
     return await this.danalMobilePaymentService.cancel(orderId);
   }
 
+  @Post('cancel')
+  @Render('danal-mobile-payment/cancel')
+  async cancelPost(@Query('orderId') orderId: string) {
+    return await this.danalMobilePaymentService.cancel(orderId);
+  }
+
   @Post('success')
   @Render('danal-mobile-payment/success')
   async success(@Body() data: any) {

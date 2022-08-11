@@ -167,7 +167,7 @@ export class DanalCreditCardService {
         console.log('POST SUCCESS', data)
         const { ORDERID: orderId } = data;
 
-        await this._updateOrder(orderId, PAYMENT_STATUS.COMPLETED, data);
+        await this._updateOrder(+orderId, PAYMENT_STATUS.COMPLETED, data);
 
         return data;
     }
